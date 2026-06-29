@@ -84,6 +84,11 @@ const requiredTools = [
   "evaluate_promo_kit",
   "create_and_evaluate_promo_kit",
   "run_benchmark_suite",
+  "list_intro_styles",
+  "design_youtube_intro",
+  "list_news_categories",
+  "fetch_latest_news",
+  "create_news_broadcast",
 ];
 
 for (const toolName of requiredTools) {

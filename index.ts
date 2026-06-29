@@ -14,7 +14,19 @@ import {
 import { generateVoiceover as createVoiceover } from "./src/providers/elevenlabs";
 import { researchMarket as searchMarket } from "./src/providers/exa";
 import { createCampaignVisual } from "./src/providers/images";
+import {
+  createNewsBroadcast,
+  getLatestNews,
+  newsCategories,
+  newsCategoryIds,
+} from "./src/providers/news-broadcast";
 import { sendEvaluationToLangfuse } from "./src/providers/langfuse";
+import {
+  designYoutubeIntro,
+  introStyleIds,
+  introStyles,
+  researchYoutubeIntroTrends,
+} from "./src/providers/youtube-intro";
 import type { PromoKit } from "./src/types";
 
 try {
@@ -30,7 +42,7 @@ const server = new MCPServer({
   description:
     "Davide Youtube Promo Kit — generate and benchmark research-backed promo kits with Exa, Unsplash or fal.ai, ElevenLabs, and Langfuse.",
   instructions:
-    "Use create_and_evaluate_promo_kit for the best workshop demo. Use create_promo_kit for generation only, evaluate_promo_kit for judging an existing kit, and individual tools for research-only, poster-only, or voiceover-only requests.",
+    "Use create_news_broadcast when the user wants a TV-style news intro with latest headlines, anchor voiceover, and image slides. Use create_and_evaluate_promo_kit for the best workshop promo demo. Use design_youtube_intro when the user wants a YouTube channel intro concept with shot list, colors, hero frame, and spoken hook. Use fetch_latest_news for headlines only without slides or voice. Use create_promo_kit for generation only, evaluate_promo_kit for judging an existing kit, and individual tools for research-only, poster-only, or voiceover-only requests.",
   baseUrl: process.env.MCP_URL || "http://localhost:3000",
   favicon: "favicon.ico",
   websiteUrl: "https://manufact.com",
@@ -156,6 +168,95 @@ const benchmarkSuiteSchema = z.object({
       langfuse: langfuseSchema,
     })
   ),
+});
+
+const introStyleSchema = z.enum(introStyleIds);
+
+const introResearchSchema = z.object({
+  channelName: z.string(),
+  niche: z.string(),
+  audience: z.string(),
+  style: introStyleSchema,
+  angle: z.string(),
+  insights: z.array(z.string()),
+  sources: z.array(sourceSchema),
+});
+
+const introShotSchema = z.object({
+  second: z.number(),
+  duration: z.number(),
+  visual: z.string(),
+  textOverlay: z.string().optional(),
+  motion: z.string(),
+});
+
+const youtubeIntroSchema = z.object({
+  title: z.string(),
+  channelName: z.string(),
+  niche: z.string(),
+  audience: z.string(),
+  style: introStyleSchema,
+  styleLabel: z.string(),
+  durationSeconds: z.number(),
+  hookLine: z.string(),
+  tagline: z.string(),
+  shotList: z.array(introShotSchema),
+  typography: z.object({
+    headlineFont: z.string(),
+    bodyFont: z.string(),
+    treatment: z.string(),
+  }),
+  colorPalette: z.array(z.string()),
+  soundDirection: z.object({
+    mood: z.string(),
+    tempo: z.string(),
+    sfxNotes: z.string(),
+  }),
+  subscribeMoment: z.string(),
+  productionNotes: z.array(z.string()),
+  research: introResearchSchema,
+  thumbnailConcept: posterSchema,
+  voiceover: voiceoverSchema,
+});
+
+const newsCategorySchema = z.enum(newsCategoryIds);
+
+const newsStorySchema = z.object({
+  headline: z.string(),
+  summary: z.string(),
+  source: sourceSchema,
+});
+
+const latestNewsSchema = z.object({
+  category: z.string(),
+  region: z.string(),
+  fetchedAt: z.string(),
+  stories: z.array(newsStorySchema),
+});
+
+const newsSlideSchema = z.object({
+  slideNumber: z.number(),
+  type: z.enum(["opening", "story", "closing"]),
+  headline: z.string(),
+  onScreenText: z.string(),
+  anchorLine: z.string(),
+  image: posterSchema,
+  source: sourceSchema.optional(),
+});
+
+const newsBroadcastSchema = z.object({
+  title: z.string(),
+  showName: z.string(),
+  category: z.string(),
+  region: z.string(),
+  broadcastDate: z.string(),
+  openingLine: z.string(),
+  closingLine: z.string(),
+  slides: z.array(newsSlideSchema),
+  fullScript: z.string(),
+  voiceover: voiceoverSchema,
+  sources: z.array(sourceSchema),
+  productionNotes: z.array(z.string()),
 });
 
 const setupProviderSchema = z.object({
@@ -335,6 +436,8 @@ function buildWorkshopFlow(): z.infer<typeof workshopFlowSchema> {
       "Call run_demo_preset with cursor-build-night-padova for the safest live demo.",
       "Call create_and_evaluate_promo_kit with a custom brief to show agent orchestration.",
       "Call run_benchmark_suite to compare three tone variants and send multiple judge traces to Langfuse.",
+      "Call design_youtube_intro when the user wants a channel intro concept instead of a promo campaign.",
+      "Call create_news_broadcast when the user wants a TV-style news intro with latest headlines, slides, and anchor voiceover.",
       "Open Langfuse if configured, or explain langfuse.sent=false as the local fallback path.",
     ],
     steps: [
@@ -387,6 +490,26 @@ function buildWorkshopFlow(): z.infer<typeof workshopFlowSchema> {
       },
       {
         step: 6,
+        title: "YouTube intro design",
+        tool: "design_youtube_intro",
+        why: "Shows how the same MCP stack can produce channel intros, not only event promo kits.",
+        prompt:
+          "Design a cinematic-tech YouTube intro for a developer tools channel aimed at Cursor users.",
+        expected:
+          "Shot list, color palette, hero frame, spoken hook, and optional ElevenLabs preview.",
+      },
+      {
+        step: 7,
+        title: "News broadcast intro",
+        tool: "create_news_broadcast",
+        why: "Shows Exa headlines, ElevenLabs anchor voice, and one image slide per story in a news-program format.",
+        prompt:
+          "Create a technology news broadcast for Davide Daily covering global headlines with 3 stories.",
+        expected:
+          "Opening slide, one slide per headline, closing slide, full anchor script, and voiceover status.",
+      },
+      {
+        step: 8,
         title: "Benchmarking story",
         tool: "evaluate_promo_kit",
         why: "Shows the LLM-as-a-judge idea separately from asset generation.",
@@ -928,6 +1051,217 @@ server.tool(
       candidates,
     });
   }
+);
+
+server.tool(
+  {
+    name: "list_intro_styles",
+    description:
+      "List YouTube intro style presets for design_youtube_intro dropdown choices.",
+    schema: z.object({}),
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+    outputSchema: z.object({
+      styles: z.array(
+        z.object({
+          id: introStyleSchema,
+          label: z.string(),
+          mood: z.string(),
+          palette: z.array(z.string()),
+        })
+      ),
+    }),
+  },
+  async () =>
+    object({
+      styles: introStyleIds.map((id) => ({
+        id,
+        label: introStyles[id].label,
+        mood: introStyles[id].mood,
+        palette: introStyles[id].palette,
+      })),
+    })
+);
+
+server.tool(
+  {
+    name: "design_youtube_intro",
+    description:
+      "Design a YouTube channel intro with Exa trend research, shot list, color palette, hero frame, and spoken hook voiceover.",
+    schema: z.object({
+      channelName: z.string().describe("YouTube channel or show name"),
+      niche: z
+        .string()
+        .describe("Channel niche, e.g. developer tools, gaming, education"),
+      audience: z.string().describe("Primary viewer audience"),
+      style: introStyleSchema
+        .default("cinematic-tech")
+        .describe("Intro visual and motion style preset"),
+      durationSeconds: z
+        .number()
+        .min(5)
+        .max(20)
+        .default(8)
+        .describe("Target intro length in seconds"),
+      tagline: z
+        .string()
+        .optional()
+        .describe("Optional on-screen tagline; auto-generated if omitted"),
+    }),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
+    outputSchema: youtubeIntroSchema,
+  },
+  async ({ channelName, niche, audience, style, durationSeconds, tagline }) =>
+    object(
+      await designYoutubeIntro({
+        channelName,
+        niche,
+        audience,
+        style,
+        durationSeconds,
+        tagline,
+      })
+    )
+);
+
+server.tool(
+  {
+    name: "research_youtube_intro_trends",
+    description:
+      "Research YouTube intro design trends for a channel niche without generating assets.",
+    schema: z.object({
+      channelName: z.string().describe("YouTube channel or show name"),
+      niche: z.string().describe("Channel niche"),
+      audience: z.string().describe("Primary viewer audience"),
+      style: introStyleSchema.default("cinematic-tech"),
+      maxResults: z.number().min(1).max(8).default(3),
+    }),
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
+    outputSchema: introResearchSchema,
+  },
+  async ({ channelName, niche, audience, style, maxResults }) =>
+    object(
+      await researchYoutubeIntroTrends({
+        channelName,
+        niche,
+        audience,
+        style,
+        maxResults,
+      })
+    )
+);
+
+server.tool(
+  {
+    name: "list_news_categories",
+    description:
+      "List news category presets for fetch_latest_news and create_news_broadcast.",
+    schema: z.object({}),
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+    outputSchema: z.object({
+      categories: z.array(
+        z.object({
+          id: newsCategorySchema,
+          label: z.string(),
+          queryHint: z.string(),
+        })
+      ),
+    }),
+  },
+  async () =>
+    object({
+      categories: newsCategoryIds.map((id) => ({
+        id,
+        ...newsCategories[id],
+      })),
+    })
+);
+
+server.tool(
+  {
+    name: "fetch_latest_news",
+    description:
+      "Fetch the latest headlines for a category and region using Exa. Returns stories only, no slides or voiceover.",
+    schema: z.object({
+      category: newsCategorySchema
+        .default("technology")
+        .describe("News beat or section"),
+      region: z
+        .string()
+        .default("global")
+        .describe("Geographic focus, e.g. global, Europe, United States, Italy"),
+      maxResults: z.number().min(1).max(8).default(5),
+    }),
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
+    outputSchema: latestNewsSchema,
+  },
+  async ({ category, region, maxResults }) =>
+    object(await getLatestNews({ category, region, maxResults }))
+);
+
+server.tool(
+  {
+    name: "create_news_broadcast",
+    description:
+      "Create a TV-style news intro: fetch latest headlines with Exa, generate one image slide per story plus opening and closing slides, and produce an anchor voiceover that reads the full bulletin.",
+    schema: z.object({
+      showName: z
+        .string()
+        .describe("News program or channel name, e.g. Davide Daily"),
+      category: newsCategorySchema
+        .default("technology")
+        .describe("News beat or section"),
+      region: z
+        .string()
+        .default("global")
+        .describe("Geographic focus, e.g. global, Europe, United States, Italy"),
+      maxStories: z
+        .number()
+        .min(1)
+        .max(5)
+        .default(3)
+        .describe("Number of headline stories to include"),
+      language: z
+        .string()
+        .default("en")
+        .describe("Voiceover language code"),
+    }),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
+    outputSchema: newsBroadcastSchema,
+  },
+  async ({ showName, category, region, maxStories, language }) =>
+    object(
+      await createNewsBroadcast({
+        showName,
+        category,
+        region,
+        maxStories,
+        language,
+      })
+    )
 );
 
 server.listen().then(() => {

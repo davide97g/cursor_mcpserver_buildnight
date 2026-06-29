@@ -25,6 +25,13 @@ Use `create_promo_kit` only for generation without benchmarking. Use individual 
 - `get_workshop_flow`: presenter-friendly sequence for the demo
 - `list_demo_presets`: available demo scenarios
 - `run_demo_preset`: one-click preset demo
+- `list_intro_styles`: YouTube intro style presets
+- `design_youtube_intro`: channel intro with shot list, hero frame, and hook voiceover
+- `list_news_categories`: news beat presets for broadcast tools
+- `fetch_latest_news`: latest headlines only via Exa
+- `create_news_broadcast`: TV-style news intro with slides, anchor script, and voiceover
+
+Use `create_news_broadcast` when the user wants a news-program style intro: latest headlines, one image slide per story, and a voice that reads the bulletin. Use `fetch_latest_news` when they only want headlines without assets.
 
 Good demo prompt:
 
