@@ -2,9 +2,15 @@ import { MCPServer, object } from "mcp-use/server";
 import { z } from "zod";
 import {
   evaluateWithHeuristics,
-  evaluateWithOpenAI,
+  evaluateWithLlm,
 } from "./src/evaluation";
-import { imageProvider } from "./src/config";
+import {
+  imageProvider,
+  judgeApiKey,
+  judgeBaseUrl,
+  judgeModel,
+  judgeProvider,
+} from "./src/config";
 import { generateVoiceover as createVoiceover } from "./src/providers/elevenlabs";
 import { researchMarket as searchMarket } from "./src/providers/exa";
 import { createCampaignVisual } from "./src/providers/images";
@@ -89,7 +95,7 @@ const evaluationScoreSchema = z.object({
 });
 
 const evaluationSchema = z.object({
-  judge: z.enum(["heuristic", "openai"]),
+  judge: z.enum(["heuristic", "llm"]),
   overallScore: z.number(),
   verdict: z.enum(["excellent", "good", "needs_work"]),
   scores: z.array(evaluationScoreSchema),
@@ -162,7 +168,7 @@ const setupProviderSchema = z.object({
 
 const setupStatusSchema = z.object({
   imageProvider: z.enum(["unsplash", "fal"]),
-  judgeProvider: z.enum(["heuristic", "openai"]),
+  judgeProvider: z.enum(["heuristic", "llm"]),
   demoReady: z.boolean(),
   missingRequired: z.array(z.string()),
   providers: z.array(setupProviderSchema),
@@ -239,10 +245,7 @@ function isConfigured(envVar: string): boolean {
 
 function buildSetupStatus(): z.infer<typeof setupStatusSchema> {
   const selectedImageProvider = imageProvider();
-  const selectedJudgeProvider =
-    process.env.JUDGE_PROVIDER?.toLowerCase() === "openai"
-      ? "openai"
-      : "heuristic";
+  const selectedJudgeProvider = judgeProvider();
 
   const providers = [
     {
@@ -274,11 +277,11 @@ function buildSetupStatus(): z.infer<typeof setupStatusSchema> {
       note: "Optional for workshop flow; unavailable audio keeps the script.",
     },
     {
-      name: "OpenAI judge",
-      envVar: "OPENAI_API_KEY",
-      configured: isConfigured("OPENAI_API_KEY"),
-      required: selectedJudgeProvider === "openai",
-      note: "Only required when JUDGE_PROVIDER=openai.",
+      name: "LLM judge (Kimi)",
+      envVar: "JUDGE_API_KEY",
+      configured: Boolean(judgeApiKey()),
+      required: selectedJudgeProvider === "llm",
+      note: "Only required when JUDGE_PROVIDER=llm. Uses Moonshot OpenAI-compatible API.",
     },
     {
       name: "Langfuse public key",
@@ -497,15 +500,16 @@ async function judgePromoKit(input: {
   audience: string;
   location: string;
 }) {
-  const provider = process.env.JUDGE_PROVIDER?.toLowerCase();
-  const apiKey = process.env.OPENAI_API_KEY;
+  const provider = judgeProvider();
+  const apiKey = judgeApiKey();
 
-  if (provider === "openai" && apiKey) {
+  if (provider === "llm" && apiKey) {
     try {
-      return await evaluateWithOpenAI({
+      return await evaluateWithLlm({
         ...input,
         apiKey,
-        model: process.env.JUDGE_MODEL || "gpt-4o-mini",
+        baseUrl: judgeBaseUrl(),
+        model: judgeModel(),
       });
     } catch {
       return evaluateWithHeuristics(input);

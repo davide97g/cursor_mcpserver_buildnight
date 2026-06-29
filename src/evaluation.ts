@@ -7,7 +7,7 @@ export type EvaluationScore = {
 };
 
 export type PromoKitEvaluation = {
-  judge: "heuristic" | "openai";
+  judge: "heuristic" | "llm";
   overallScore: number;
   verdict: "excellent" | "good" | "needs_work";
   scores: EvaluationScore[];
@@ -179,12 +179,13 @@ export function evaluateWithHeuristics(input: {
   };
 }
 
-export async function evaluateWithOpenAI(input: {
+export async function evaluateWithLlm(input: {
   promoKit: PromoKit;
   topic: string;
   audience: string;
   location: string;
   apiKey: string;
+  baseUrl: string;
   model: string;
 }): Promise<PromoKitEvaluation> {
   const prompt = `You are an LLM-as-a-judge evaluator for a workshop demo.
@@ -207,7 +208,8 @@ Return strict JSON with:
 Promo kit:
 ${JSON.stringify(input.promoKit, null, 2)}`;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const endpoint = `${input.baseUrl.replace(/\/$/, "")}/chat/completions`;
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -229,7 +231,7 @@ ${JSON.stringify(input.promoKit, null, 2)}`;
 
   if (!response.ok) {
     throw new Error(
-      `OpenAI judge failed (${response.status}): ${await response.text()}`
+      `LLM judge failed (${response.status}): ${await response.text()}`
     );
   }
 
@@ -239,13 +241,13 @@ ${JSON.stringify(input.promoKit, null, 2)}`;
   const content = payload.choices?.[0]?.message?.content;
 
   if (!content) {
-    throw new Error("OpenAI judge returned no content.");
+    throw new Error("LLM judge returned no content.");
   }
 
   const parsed = JSON.parse(content) as Omit<PromoKitEvaluation, "judge">;
 
   return {
-    judge: "openai",
+    judge: "llm",
     overallScore: clampScore(parsed.overallScore),
     verdict: parsed.verdict,
     scores: parsed.scores.map((score) => ({

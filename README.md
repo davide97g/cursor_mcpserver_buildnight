@@ -33,8 +33,9 @@ FAL_KEY=...
 ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=TX3LPaxmHKxFdv7VOQHJ
 JUDGE_PROVIDER=heuristic
-OPENAI_API_KEY=
-JUDGE_MODEL=gpt-4o-mini
+JUDGE_API_KEY=
+JUDGE_BASE_URL=https://api.moonshot.ai/v1
+JUDGE_MODEL=kimi-k2.7-code-highspeed
 LANGFUSE_PUBLIC_KEY=
 LANGFUSE_SECRET_KEY=
 LANGFUSE_BASE_URL=https://cloud.langfuse.com
@@ -42,7 +43,7 @@ LANGFUSE_BASE_URL=https://cloud.langfuse.com
 
 `ELEVENLABS_VOICE_ID` is optional. The example value is a premade voice that worked with the free-plan key during testing.
 `FAL_KEY` is optional unless you set `IMAGE_PROVIDER=fal`.
-Langfuse and OpenAI are optional. Without them, the benchmark still works with a local heuristic judge and returns `langfuse.sent: false`.
+Langfuse and the Kimi LLM judge are optional. Without them, the benchmark still works with a local heuristic judge and returns `langfuse.sent: false`.
 When Langfuse keys are missing, `langfuse.dryRun: true` shows the trace name and score names that would be sent.
 The app loads `.env` automatically on Node 22+, and direnv-exported variables still work.
 
@@ -281,13 +282,13 @@ Fix: set `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_BASE_URL`, 
 
 For the workshop, `dryRun: true` is still useful: show `traceName`, `scoreNames`, and `scoreCount` to explain exactly what the app would send to Langfuse once keys are configured.
 
-OpenAI judge is not configured:
+LLM judge is not configured:
 
 ```text
 judge: "heuristic"
 ```
 
-This is expected for the workshop. Set `JUDGE_PROVIDER=openai` and `OPENAI_API_KEY` only if you want a live LLM judge instead of the deterministic rubric.
+This is expected for the workshop. Set `JUDGE_PROVIDER=llm`, `JUDGE_API_KEY`, and optionally `JUDGE_BASE_URL` / `JUDGE_MODEL` if you want a live Kimi judge instead of the deterministic rubric. Defaults target Moonshot's OpenAI-compatible API with `kimi-k2.7-code-highspeed`.
 
 Check setup before a live demo:
 
@@ -295,7 +296,7 @@ Check setup before a live demo:
 check_setup()
 ```
 
-This reports which providers are configured without exposing key values. Exa and the selected image provider are required for the finished live demo. ElevenLabs, OpenAI judge, and Langfuse can be unavailable without breaking the main promo kit flow.
+This reports which providers are configured without exposing key values. Exa and the selected image provider are required for the finished live demo. ElevenLabs, the Kimi LLM judge, and Langfuse can be unavailable without breaking the main promo kit flow.
 
 Langfuse implementation note:
 

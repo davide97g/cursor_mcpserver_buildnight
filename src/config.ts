@@ -37,3 +37,31 @@ export function imageProvider(): "unsplash" | "fal" {
 
   return "unsplash";
 }
+
+export function judgeProvider(): "heuristic" | "llm" {
+  const provider = process.env.JUDGE_PROVIDER?.toLowerCase();
+
+  if (provider === "llm" || provider === "openai") {
+    return "llm";
+  }
+
+  return "heuristic";
+}
+
+export function judgeApiKey(): string | undefined {
+  return (
+    process.env.JUDGE_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim()
+  );
+}
+
+export function judgeBaseUrl(): string {
+  return (
+    process.env.JUDGE_BASE_URL?.trim() || "https://api.moonshot.ai/v1"
+  );
+}
+
+export function judgeModel(): string {
+  return (
+    process.env.JUDGE_MODEL?.trim() || "kimi-k2.7-code-highspeed"
+  );
+}
