@@ -28,14 +28,30 @@ export function elevenLabsVoiceId(override?: string): string {
   );
 }
 
-export function imageProvider(): "unsplash" | "fal" {
+export function imageProvider(): "unsplash" | "fal" | "placeholder" {
   const provider = process.env.IMAGE_PROVIDER?.toLowerCase();
 
   if (provider === "fal") {
     return "fal";
   }
 
-  return "unsplash";
+  if (provider === "unsplash") {
+    return "unsplash";
+  }
+
+  if (provider === "placeholder") {
+    return "placeholder";
+  }
+
+  if (process.env.FAL_KEY?.trim()) {
+    return "fal";
+  }
+
+  if (process.env.UNSPLASH_ACCESS_KEY?.trim()) {
+    return "unsplash";
+  }
+
+  return "placeholder";
 }
 
 export function judgeProvider(): "heuristic" | "llm" {
@@ -63,5 +79,33 @@ export function judgeBaseUrl(): string {
 export function judgeModel(): string {
   return (
     process.env.JUDGE_MODEL?.trim() || "kimi-k2.7-code-highspeed"
+  );
+}
+
+export function ttsProvider(): "openai" | "elevenlabs" {
+  const provider = process.env.TTS_PROVIDER?.toLowerCase();
+
+  if (provider === "elevenlabs") {
+    return "elevenlabs";
+  }
+
+  if (provider === "openai") {
+    return "openai";
+  }
+
+  if (process.env.OPENAI_TTS_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim()) {
+    return "openai";
+  }
+
+  if (process.env.ELEVENLABS_API_KEY?.trim()) {
+    return "elevenlabs";
+  }
+
+  return "openai";
+}
+
+export function openAiTtsConfigured(): boolean {
+  return Boolean(
+    process.env.OPENAI_TTS_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim()
   );
 }

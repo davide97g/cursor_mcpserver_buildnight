@@ -6,7 +6,7 @@ import type {
   PosterResult,
 } from "../types";
 import { fetchLatestNews } from "./exa";
-import { generateVoiceover } from "./elevenlabs";
+import { generateVoiceover } from "./voiceover";
 import { createCampaignVisual } from "./images";
 
 export const newsCategoryIds = [

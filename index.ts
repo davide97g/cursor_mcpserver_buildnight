@@ -10,8 +10,10 @@ import {
   judgeBaseUrl,
   judgeModel,
   judgeProvider,
+  openAiTtsConfigured,
+  ttsProvider,
 } from "./src/config";
-import { generateVoiceover as createVoiceover } from "./src/providers/elevenlabs";
+import { generateVoiceover as createVoiceover } from "./src/providers/voiceover";
 import { researchMarket as searchMarket } from "./src/providers/exa";
 import { createCampaignVisual } from "./src/providers/images";
 import {
@@ -40,7 +42,7 @@ const server = new MCPServer({
   title: "Davide Youtube Promo Kit",
   version: "1.0.0",
   description:
-    "Davide Youtube Promo Kit — generate and benchmark research-backed promo kits with Exa, Unsplash or fal.ai, ElevenLabs, and Langfuse.",
+    "Davide Youtube Promo Kit — generate and benchmark research-backed promo kits with Exa, fal.ai or placeholder visuals, OpenAI TTS, and Langfuse.",
   instructions:
     "Use create_news_broadcast when the user wants a TV-style news intro with latest headlines, anchor voiceover, and image slides. Use create_and_evaluate_promo_kit for the best workshop promo demo. Use design_youtube_intro when the user wants a YouTube channel intro concept with shot list, colors, hero frame, and spoken hook. Use fetch_latest_news for headlines only without slides or voice. Use create_promo_kit for generation only, evaluate_promo_kit for judging an existing kit, and individual tools for research-only, poster-only, or voiceover-only requests.",
   baseUrl: process.env.MCP_URL || "http://localhost:3000",
@@ -268,7 +270,8 @@ const setupProviderSchema = z.object({
 });
 
 const setupStatusSchema = z.object({
-  imageProvider: z.enum(["unsplash", "fal"]),
+  imageProvider: z.enum(["unsplash", "fal", "placeholder"]),
+  ttsProvider: z.enum(["openai", "elevenlabs"]),
   judgeProvider: z.enum(["heuristic", "llm"]),
   demoReady: z.boolean(),
   missingRequired: z.array(z.string()),
@@ -346,6 +349,7 @@ function isConfigured(envVar: string): boolean {
 
 function buildSetupStatus(): z.infer<typeof setupStatusSchema> {
   const selectedImageProvider = imageProvider();
+  const selectedTtsProvider = ttsProvider();
   const selectedJudgeProvider = judgeProvider();
 
   const providers = [
@@ -361,21 +365,28 @@ function buildSetupStatus(): z.infer<typeof setupStatusSchema> {
       envVar: "UNSPLASH_ACCESS_KEY",
       configured: isConfigured("UNSPLASH_ACCESS_KEY"),
       required: selectedImageProvider === "unsplash",
-      note: "Required when IMAGE_PROVIDER=unsplash.",
+      note: "Only required when IMAGE_PROVIDER=unsplash.",
     },
     {
       name: "fal.ai",
       envVar: "FAL_KEY",
       configured: isConfigured("FAL_KEY"),
       required: selectedImageProvider === "fal",
-      note: "Only required when IMAGE_PROVIDER=fal.",
+      note: "Recommended alternative to Unsplash. Set IMAGE_PROVIDER=fal or leave auto when FAL_KEY is set.",
+    },
+    {
+      name: "OpenAI TTS",
+      envVar: "OPENAI_API_KEY",
+      configured: openAiTtsConfigured(),
+      required: selectedTtsProvider === "openai",
+      note: "Default voice provider. Uses tts-1-hd and OPENAI_TTS_VOICE (default onyx). Optional OPENAI_TTS_API_KEY overrides OPENAI_API_KEY.",
     },
     {
       name: "ElevenLabs",
       envVar: "ELEVENLABS_API_KEY",
       configured: isConfigured("ELEVENLABS_API_KEY"),
-      required: false,
-      note: "Optional for workshop flow; unavailable audio keeps the script.",
+      required: selectedTtsProvider === "elevenlabs",
+      note: "Legacy option. Set TTS_PROVIDER=elevenlabs to use instead of OpenAI TTS.",
     },
     {
       name: "LLM judge (Kimi)",
@@ -405,11 +416,14 @@ function buildSetupStatus(): z.infer<typeof setupStatusSchema> {
     .map((provider) => provider.envVar);
 
   const warnings = [
-    !isConfigured("ELEVENLABS_API_KEY")
-      ? "ElevenLabs is not configured, so voiceover tools will return a script with status unavailable."
+    selectedImageProvider === "placeholder"
+      ? "No image API key found. Using placeholder slides. Add FAL_KEY for AI-generated images (recommended) or UNSPLASH_ACCESS_KEY for stock photos."
       : "",
-    isConfigured("ELEVENLABS_API_KEY")
-      ? "ElevenLabs account tier, selected voice, or remaining credits may still prevent audio generation."
+    selectedTtsProvider === "openai" && !openAiTtsConfigured()
+      ? "OpenAI TTS is selected but OPENAI_API_KEY is missing, so voiceover tools will return the script with status unavailable."
+      : "",
+    selectedTtsProvider === "elevenlabs" && !isConfigured("ELEVENLABS_API_KEY")
+      ? "ElevenLabs is selected but ELEVENLABS_API_KEY is missing, so voiceover tools will return the script with status unavailable."
       : "",
     !isConfigured("LANGFUSE_PUBLIC_KEY") || !isConfigured("LANGFUSE_SECRET_KEY")
       ? "Langfuse is optional and currently disabled; benchmark results still return locally."
@@ -418,6 +432,7 @@ function buildSetupStatus(): z.infer<typeof setupStatusSchema> {
 
   return {
     imageProvider: selectedImageProvider,
+    ttsProvider: selectedTtsProvider,
     judgeProvider: selectedJudgeProvider,
     demoReady: missingRequired.length === 0,
     missingRequired,
@@ -806,7 +821,7 @@ server.tool(
   {
     name: "generate_poster",
     description:
-      "Create a campaign visual. Defaults to Unsplash stock imagery; set IMAGE_PROVIDER=fal to use fal.ai generation.",
+      "Create a campaign visual. Uses fal.ai when FAL_KEY is set, Unsplash when UNSPLASH_ACCESS_KEY is set, or placeholder slides when neither is configured.",
     schema: z.object({
       brief: z.string().describe("Creative brief for the poster"),
       visualStyle: z
@@ -829,13 +844,15 @@ server.tool(
 server.tool(
   {
     name: "generate_voiceover",
-    description: "Use ElevenLabs to generate a short spoken voice ad.",
+    description: "Generate a spoken voiceover with OpenAI TTS (default) or ElevenLabs when TTS_PROVIDER=elevenlabs.",
     schema: z.object({
       script: z.string().describe("Short spoken ad script"),
       voiceId: z
         .string()
         .optional()
-        .describe("Optional ElevenLabs voice ID; falls back to ELEVENLABS_VOICE_ID"),
+        .describe(
+          "Optional voice override. OpenAI voices: alloy, ash, coral, echo, fable, nova, onyx, sage, shimmer. ElevenLabs voice ID when TTS_PROVIDER=elevenlabs."
+        ),
       language: z.string().default("en"),
     }),
     annotations: {
@@ -854,7 +871,7 @@ server.tool(
   {
     name: "create_promo_kit",
     description:
-      "Create a complete promo kit with Exa research, Unsplash or fal.ai campaign visuals, and ElevenLabs voiceover.",
+      "Create a complete promo kit with Exa research, campaign visuals, and OpenAI TTS voiceover.",
     schema: z.object({
       topic: z.string().describe("Campaign topic, event, or product"),
       audience: z.string().describe("Target audience"),

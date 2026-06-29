@@ -17,7 +17,7 @@ Use `create_promo_kit` only for generation without benchmarking. Use individual 
 
 - `research_market`: Exa-backed research and sources
 - `generate_poster`: Unsplash campaign visual by default, or fal.ai image generation when `IMAGE_PROVIDER=fal`
-- `generate_voiceover`: ElevenLabs text-to-speech
+- `generate_voiceover`: OpenAI TTS by default (or ElevenLabs when TTS_PROVIDER=elevenlabs)
 - `create_promo_kit`: orchestrates research, poster, captions, script, and voiceover
 - `evaluate_promo_kit`: judges a pasted JSON promo kit
 - `create_and_evaluate_promo_kit`: full generation plus benchmark

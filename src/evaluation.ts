@@ -163,7 +163,7 @@ export function evaluateWithHeuristics(input: {
   const improvements = [
     promoKit.voiceover.status === "generated"
       ? "Try A/B testing the voiceover script against another tone."
-      : "Enable an ElevenLabs voice with enough quota to produce audio.",
+      : "Configure OpenAI TTS with OPENAI_API_KEY to produce audio.",
     validSources.length >= 3
       ? "Turn the best source insight into a sharper headline."
       : "Add more research sources for stronger grounding.",

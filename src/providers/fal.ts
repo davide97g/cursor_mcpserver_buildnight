@@ -15,6 +15,20 @@ type FalSubscribeResult = {
   images?: FalImage[];
 };
 
+function imageSize(format: string): "square_hd" | "landscape_16_9" | "portrait_16_9" {
+  const normalized = format.toLowerCase();
+
+  if (normalized.includes("square")) {
+    return "square_hd";
+  }
+
+  if (normalized.includes("portrait")) {
+    return "portrait_16_9";
+  }
+
+  return "landscape_16_9";
+}
+
 export async function generatePoster(input: {
   brief: string;
   visualStyle: string;
@@ -33,7 +47,7 @@ export async function generatePoster(input: {
   const result = (await fal.subscribe("fal-ai/flux/dev", {
     input: {
       prompt,
-      image_size: "square_hd",
+      image_size: imageSize(input.format),
       num_images: 1,
     },
   })) as FalSubscribeResult;

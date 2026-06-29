@@ -6,7 +6,7 @@ import type {
   YoutubeIntroDesign,
   YoutubeIntroShot,
 } from "../types";
-import { generateVoiceover } from "./elevenlabs";
+import { generateVoiceover } from "./voiceover";
 import { createCampaignVisual } from "./images";
 
 export const introStyleIds = [
