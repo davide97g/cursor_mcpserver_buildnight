@@ -24,7 +24,7 @@ const ProductSearchResult: React.FC = () => {
     <McpUseProvider>
       <AppsSDKUIProvider linkComponent={Link}>
         <div className="bg-surface-elevated border border-default rounded-2xl p-6">
-          <p className="text-sm text-secondary mb-2">Promo Kit MCP</p>
+          <p className="text-sm text-secondary mb-2">Davide Youtube Promo Kit</p>
           <h2 className="heading-lg mb-3">
             {isPending ? "Generating kit..." : props.title}
           </h2>

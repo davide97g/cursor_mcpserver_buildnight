@@ -19,10 +19,10 @@ try {
 
 const server = new MCPServer({
   name: "promo-kit-mcp-finished",
-  title: "Promo Kit MCP",
+  title: "Davide Youtube Promo Kit",
   version: "1.0.0",
   description:
-    "Generate and benchmark research-backed promo kits with Exa, Unsplash or fal.ai, ElevenLabs, and Langfuse.",
+    "Davide Youtube Promo Kit — generate and benchmark research-backed promo kits with Exa, Unsplash or fal.ai, ElevenLabs, and Langfuse.",
   instructions:
     "Use create_and_evaluate_promo_kit for the best workshop demo. Use create_promo_kit for generation only, evaluate_promo_kit for judging an existing kit, and individual tools for research-only, poster-only, or voiceover-only requests.",
   baseUrl: process.env.MCP_URL || "http://localhost:3000",
@@ -324,7 +324,7 @@ function buildSetupStatus(): z.infer<typeof setupStatusSchema> {
 
 function buildWorkshopFlow(): z.infer<typeof workshopFlowSchema> {
   return {
-    title: "Promo Kit MCP Workshop Flow",
+    title: "Davide Youtube Promo Kit Workshop Flow",
     audience: "Non-technical attendees, developers, and Cursor Agent users",
     recommendedPath: [
       "Call check_setup to confirm the local server and provider keys.",
@@ -563,7 +563,7 @@ server.tool(
   {
     name: "get_workshop_flow",
     description:
-      "Return the recommended live-demo sequence for the Promo Kit MCP workshop.",
+      "Return the recommended live-demo sequence for the Davide Youtube Promo Kit workshop.",
     schema: z.object({}),
     annotations: {
       readOnlyHint: true,
@@ -927,5 +927,5 @@ server.tool(
 );
 
 server.listen().then(() => {
-  console.log("Promo Kit MCP running");
+  console.log("Davide Youtube Promo Kit running");
 });

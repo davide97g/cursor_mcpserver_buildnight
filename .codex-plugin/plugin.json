@@ -1,6 +1,6 @@
 {
   "name": "promo-kit-mcp",
   "version": "1.0.0",
-  "description": "Generate and benchmark promo kits with Exa, Unsplash, ElevenLabs, and Langfuse.",
+  "description": "Davide Youtube Promo Kit — generate and benchmark promo kits with Exa, Unsplash, ElevenLabs, and Langfuse.",
   "skills": "./skills/"
 }

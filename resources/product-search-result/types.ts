@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const propSchema = z.object({
-  title: z.string().default("Promo Kit MCP"),
+  title: z.string().default("Davide Youtube Promo Kit"),
   summary: z
     .string()
     .default("Research, poster generation, and voiceover tools for a workshop."),
